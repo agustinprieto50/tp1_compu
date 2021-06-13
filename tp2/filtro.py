@@ -64,6 +64,7 @@ def bytes_matrix(bytes_str):
             row.append(item) 
             item = []
     return row
+    
 
 
 # def rotate(empty, chunk, j):

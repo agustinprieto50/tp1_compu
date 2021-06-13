@@ -1,68 +1,78 @@
 #!/usr/bin/python3
 import os
 import argparse
-import concurrent.futures
-import re
+from re import T
 from filtro import plain_matrix, bytes_matrix
 from manager import open_file, header, dump, rotate_header
+from threading import Thread, Barrier
 
 
-def rotate(chunk, j):
-    global constant
+barrier = Barrier(4)
+
+def rotate(chunk, chunksz):
+    j = 0
     global index
     global empty
-    chunk_list = chunk
     rows = len(empty)
-    for i in chunk_list:
-        empty[index[0]][index[1]][j] = i[j]
-        index[0] -= 1
-
-        if index[0] == -1 and index[1] == rows+1:
+    while True:
+        print('1 wait hijo r')
+        barrier.wait()
+        for i in chunk[0]:
             empty[index[0]][index[1]][j] = i[j]
-       
-        if index[0] == -1:
-            index[1] += 1
-            index[0] = rows - 1
+            index[0] -= 1
+            if index[0] == -1 and index[1] == rows+1:
+                empty[index[0]][index[1]][j] = i[j]
+            if index[0] == -1:
+                index[1] += 1
+                index[0] = rows - 1
+        if len(chunk[0]) < chunksz:
+            break
+        barrier.wait()
+
     
+def rotate_g(chunk, chunksz):
 
-def rotate_g(chunk, j):
-
-    global constant
+    j = 1
     global index2
     global empty
-    
-    chunk_list = chunk
     rows = len(empty)
-
-    for i in chunk_list:
-        empty[index2[0]][index2[1]][j] = i[j]
-        index2[0] -= 1
-        if index2[0] == -1 and index2[1] == rows+1:
+    while True:
+        print('1 wait hijo g')
+        barrier.wait()
+        for i in chunk[0]:
             empty[index2[0]][index2[1]][j] = i[j]
-        if index2[0] == -1:
-            index2[1] += 1
-            index2[0] = rows - 1
+            index2[0] -= 1
+            if index2[0] == -1 and index2[1] == rows+1:
+                empty[index2[0]][index2[1]][j] = i[j]
+            if index2[0] == -1:
+                index2[1] += 1
+                index2[0] = rows - 1
+        if len(chunk[0]) < chunksz:
+            break
+        barrier.wait()
 
 
-def rotate_b(chunk, j):
-    global constant
+def rotate_b(chunk, chunksz):
+
+    j = 2
     global index3
     global empty
-    
-    chunk_list = chunk
     rows = len(empty)
-
-    for i in chunk_list:
-        empty[index3[0]][index3[1]][j] = i[j]
-        index3[0] -= 1
-
-        if index3[0] == -1 and index3[1] == rows+1:
+    while True:
+        print('1 wait hijo b')
+        barrier.wait()
+        for i in chunk[0]:
             empty[index3[0]][index3[1]][j] = i[j]
-         
-        if index3[0] == -1:
-            index3[1] += 1
-            index3[0] = rows - 1
-    
+            index3[0] -= 1
+            if index3[0] == -1 and index3[1] == rows+1:
+                empty[index3[0]][index3[1]][j] = i[j]
+            if index3[0] == -1:
+                index3[1] += 1
+                index3[0] = rows - 1
+        if len(chunk[0]) < chunksz:
+            break
+        barrier.wait()
+
 
 if __name__ == '__main__':
     
@@ -71,14 +81,13 @@ if __name__ == '__main__':
                         required=True, help='Bloque de lectura')
     parser.add_argument('-f', '--file', action="store", metavar='FILE', type=str,
                         required=True, help='archivo a procesar')
+    # parser.add_argument('-l', '--', action="store", metavar='SIZE', type=int,
+    #                     required=True, help='Bloque de lectura')
     
     args = parser.parse_args()
     fd = args.file
-    print(fd)
     args.size = args.size - (args.size%3) 
     chunk = args.size
-    
-    # rgb = ['r', 'g', 'b']
     file = open_file(fd)
     head, length = header(file) 
     len_head = length
@@ -95,18 +104,24 @@ if __name__ == '__main__':
     index2 = [f, c ,b]
     index3 = [f, c ,b]
 
-    while True:
+    tasks = [rotate, rotate_g, rotate_b]
+    new = [0]
+    threads = []
+    for i in tasks:
+        threads.append(Thread(target=i, args=(new, chunk)))
 
+    while True:
         text = os.read(file, chunk)
-        new = bytes_matrix(text)
-        
-        rotate(new, 0)
-        rotate_g(new, 1)
-        rotate_b(new, 2)
-        
-        if text == b''and len(text) < chunk :
+        new[0] = bytes_matrix(text)
+        for i in threads:
+            if not i.is_alive() :
+                i.start()
+        barrier.wait()
+        if len(text) < chunk :
             break
+        barrier.wait()
     
+    for i in threads:
+        i.join()
     dump(empty, rotated_content_header, fd)
  
-
