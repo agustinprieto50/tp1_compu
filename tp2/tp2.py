@@ -1,53 +1,68 @@
 #!/usr/bin/python3
-
 import os
 import argparse
 import concurrent.futures
 import re
-from filtro import filtro 
-from manager import open_file, header
+from filtro import plain_matrix, bytes_matrix
+from manager import open_file, header, dump, rotate_header
 
 
-def dump(fd, chunk):
-    text = os.read(fd, chunk)
-    new_ppm = os.open('new_dog.ppm', os.O_RDWR | os.O_CREAT)
-    os.write(new_ppm, fd)
+def rotate(chunk, j):
+    global constant
+    global index
+    global empty
+    chunk_list = chunk
+    rows = len(empty)
+    for i in chunk_list:
+        empty[index[0]][index[1]][j] = i[j]
+        index[0] -= 1
 
-
-def rotate_header(f):
-    # print(f.split(b'\n'))
-    bytes_list = f.split(b'\n')
-    separator = b' '
-    sep2 = b'\n'
-    # print(bytes_list)
-    for i in bytes_list:
-        r = i.decode('utf-8')
-        regex = re.search(r'(\d+){1}(\s){1,}(\d+){1}', r)
-        if regex:
-            not_inverted = (regex.group().encode())
-            inverted_list = list()
-            l, w = not_inverted.split(b' ')
-            l, w = w, l
-            inverted_list.append(l)
-            inverted_list.append(w)
-            inverted = separator.join(inverted_list)
-            
-            for i in range(len(bytes_list)):
-                if bytes_list[i] == not_inverted:
-                    bytes_list[i] = inverted
+        if index[0] == -1 and index[1] == rows+1:
+            empty[index[0]][index[1]][j] = i[j]
+       
+        if index[0] == -1:
+            index[1] += 1
+            index[0] = rows - 1
     
 
-    return [sep2.join(bytes_list), inverted_list, not_inverted.split(b' ')]
+def rotate_g(chunk, j):
+
+    global constant
+    global index2
+    global empty
+    
+    chunk_list = chunk
+    rows = len(empty)
+
+    for i in chunk_list:
+        empty[index2[0]][index2[1]][j] = i[j]
+        index2[0] -= 1
+        if index2[0] == -1 and index2[1] == rows+1:
+            empty[index2[0]][index2[1]][j] = i[j]
+        if index2[0] == -1:
+            index2[1] += 1
+            index2[0] = rows - 1
 
 
+def rotate_b(chunk, j):
+    global constant
+    global index3
+    global empty
+    
+    chunk_list = chunk
+    rows = len(empty)
 
-        
+    for i in chunk_list:
+        empty[index3[0]][index3[1]][j] = i[j]
+        index3[0] -= 1
 
-
-
-
-
-
+        if index3[0] == -1 and index3[1] == rows+1:
+            empty[index3[0]][index3[1]][j] = i[j]
+         
+        if index3[0] == -1:
+            index3[1] += 1
+            index3[0] = rows - 1
+    
 
 if __name__ == '__main__':
     
@@ -59,18 +74,39 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     fd = args.file
+    print(fd)
+    args.size = args.size - (args.size%3) 
     chunk = args.size
-    rgb = ['r', 'g', 'b']
+    
+    # rgb = ['r', 'g', 'b']
     file = open_file(fd)
     head, length = header(file) 
-
-
-
+    len_head = length
     rotated_content_header, inverted_sz, o_size = rotate_header(head)
+    os.lseek(file, len_head, 0)
+    empty = plain_matrix(o_size, rotated_content_header)
+    empty_original = plain_matrix(o_size, rotated_content_header)
 
+    f = len(empty) - 1
+    c = 0
+    b = 0 
     
+    index = [f, c ,b]
+    index2 = [f, c ,b]
+    index3 = [f, c ,b]
 
-    print(filtro(file, length, rotated_content_header, inverted_sz, o_size, chunk))
+    while True:
+
+        text = os.read(file, chunk)
+        new = bytes_matrix(text)
+        
+        rotate(new, 0)
+        rotate_g(new, 1)
+        rotate_b(new, 2)
+        
+        if text == b''and len(text) < chunk :
+            break
     
-    # filtro('k', file, 1965906, rotate_header(head), length)
+    dump(empty, rotated_content_header, fd)
+ 
 
