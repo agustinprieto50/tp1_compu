@@ -1,77 +1,72 @@
 #!/usr/bin/python3
 import os
 import argparse
-from re import T
-from filtro import plain_matrix, bytes_matrix
+from matrix_worker import plain_matrix
 from manager import open_file, header, dump, rotate_header
 from threading import Thread, Barrier
 
 
+
 barrier = Barrier(4)
 
-def rotate(chunk, chunksz):
-    j = 0
-    global index
+# j indica la posicion dentro del pixel
+def rotate(chunk, chunksz, j):
+
+    # empty es una variable global que representa a la nueva imagen
     global empty
+
+    # fila inicial en empty
+    f = len(empty) - 1
+
+    # columna inicial en empty
+    c = 0
+    b = 0
+
+    index = [f, c ,b]
+
+    # cantidad de filas de la nueva matriz rotada
     rows = len(empty)
+
+    total = 0
+    
     while True:
         print('1 wait hijo r')
+        # realiza un wait para no empezar a ejecutar antes de que 
+        # el hilo main haya llenado el buffer
         barrier.wait()
+        
+        # a cada byte lo reubicamos en la nueva matriz
+        # chunk[0] es el buffer
         for i in chunk[0]:
-            empty[index[0]][index[1]][j] = i[j]
+            print(i)
+            # le indicamos el indice
+            empty[index[0]][index[1]][j] = i
+            
+            # subimos una fila
             index[0] -= 1
+            total += 1
+            
+            # aca hace el ultimo ingreso a la matriz rotada
             if index[0] == -1 and index[1] == rows+1:
-                empty[index[0]][index[1]][j] = i[j]
+                print('entro')
+                empty[index[0]][index[1]][j] = i
+                total += 1
+            
+            # cuando se ingresaron todos los elementos de una columnna, pasamos a la siguiente
             if index[0] == -1:
                 index[1] += 1
                 index[0] = rows - 1
+            
+        # condicion para que frene el loop
+        # cuando no haya nada mas para leer
         if len(chunk[0]) < chunksz:
             break
-        barrier.wait()
 
-    
-def rotate_g(chunk, chunksz):
-
-    j = 1
-    global index2
-    global empty
-    rows = len(empty)
-    while True:
-        print('1 wait hijo g')
-        barrier.wait()
-        for i in chunk[0]:
-            empty[index2[0]][index2[1]][j] = i[j]
-            index2[0] -= 1
-            if index2[0] == -1 and index2[1] == rows+1:
-                empty[index2[0]][index2[1]][j] = i[j]
-            if index2[0] == -1:
-                index2[1] += 1
-                index2[0] = rows - 1
-        if len(chunk[0]) < chunksz:
-            break
-        barrier.wait()
+        print('3 wait hijo r')
+        
+        barrier.wait()  
 
 
-def rotate_b(chunk, chunksz):
-
-    j = 2
-    global index3
-    global empty
-    rows = len(empty)
-    while True:
-        print('1 wait hijo b')
-        barrier.wait()
-        for i in chunk[0]:
-            empty[index3[0]][index3[1]][j] = i[j]
-            index3[0] -= 1
-            if index3[0] == -1 and index3[1] == rows+1:
-                empty[index3[0]][index3[1]][j] = i[j]
-            if index3[0] == -1:
-                index3[1] += 1
-                index3[0] = rows - 1
-        if len(chunk[0]) < chunksz:
-            break
-        barrier.wait()
 
 
 if __name__ == '__main__':
@@ -86,42 +81,63 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     fd = args.file
-    args.size = args.size - (args.size%3) 
-    chunk = args.size
+
+    # chequeamos que se multiplo de 3
+    chunk = args.size - (args.size%3) 
+    # abrimos le archivo
     file = open_file(fd)
     head, length = header(file) 
     len_head = length
     rotated_content_header, inverted_sz, o_size = rotate_header(head)
     os.lseek(file, len_head, 0)
+    # es la matriz vacia pero rotada
     empty = plain_matrix(o_size, rotated_content_header)
     empty_original = plain_matrix(o_size, rotated_content_header)
 
-    f = len(empty) - 1
-    c = 0
-    b = 0 
-    
-    index = [f, c ,b]
-    index2 = [f, c ,b]
-    index3 = [f, c ,b]
-
-    tasks = [rotate, rotate_g, rotate_b]
     new = [0]
+
     threads = []
-    for i in tasks:
-        threads.append(Thread(target=i, args=(new, chunk)))
+    for i in range(3):
+        # agregamos hilos a la lista thread
+        threads.append(Thread(target=rotate, args=(new, chunk, i)))
+
+
+    contador = 0
+    # el tamaño de la imagen rotada
+    total_size = len(empty)* (len(empty[0])) * (len(empty[0][0]))
 
     while True:
         text = os.read(file, chunk)
-        new[0] = bytes_matrix(text)
+        new[0] = text
+
+        # suma lo leido
+        contador += len(new[0])
+       
+        # solo startea hilos si no fueron starteados anteriormente
         for i in threads:
             if not i.is_alive() :
                 i.start()
+
+        # hacamos un wait para que no se ejecuten los threads primero
         barrier.wait()
-        if len(text) < chunk :
+        
+        # corta cuando el largo de lo leido sea menor al 
+        # tamaño del chunk y cuanodo el contador sea igual
+        # al tamaño total
+        if len(text) < chunk and contador >= total_size:
             break
+        
+        print('2 wait padre')
+
+        # que no se ejecuten los hilos cuando no hay nada nuevo en el buffer
         barrier.wait()
-    
+        
     for i in threads:
         i.join()
+
+    for i in empty:
+        print(i)
+    
+    # lo escribimos en la imagen nueva
     dump(empty, rotated_content_header, fd)
- 
+    print('se rotó correctamente la imagen')

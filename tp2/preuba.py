@@ -13,7 +13,7 @@ cols = len(z[0])
 
 
 
-
+print(by[0::3], 'aca')
 
 
 item = list()
@@ -26,15 +26,15 @@ for i in by:
         row.append(item) 
         item = []
 
-print(row)
 index = [0,1,2]
 for j in index:
     f = rows - 1
     c = 0
     b = 0 
-    for i in row:
-        
-        z[f][c][j] = i[j]
+    for i in by[j::3]:
+        print(i)
+        z[f][c][j] = i
+        print
         f -= 1
         
         if f == -1:
@@ -44,6 +44,7 @@ for j in index:
             z[f][c][j] = i
 
 
+
 for i in z:
     print(i)
 
@@ -51,7 +52,7 @@ for i in z:
 
 indice = []
 
-print(z[indice])
+
 
 
 # for i in range(3):
@@ -117,3 +118,111 @@ print(z[indice])
         #     break
     
 
+
+
+
+
+
+
+
+
+# if total == int(len(chunk[0])/3):
+        #     total = 0
+        #     print('2 wait hijo')
+        #     barrier.wait()  
+
+
+
+
+
+
+# def rotate(chunk, chunksz):
+#     j = 0
+#     global index
+#     global empty
+#     rows = len(empty)
+#     total = 0
+#     while True:
+#         print('1 wait hijo r')
+#         barrier.wait()
+        
+#         if total == (len(chunk)/3):
+#             print('2 wait hijo r')
+#             barrier.wait()
+#         for i in chunk[0]:
+#             empty[index[0]][index[1]][j] = i[j]
+#             total += 1
+            
+#             index[0] -= 1
+#             if index[0] == -1 and index[1] == rows+1:
+#                 empty[index[0]][index[1]][j] = i[j]
+#                 total += 1
+        
+#             if index[0] == -1:
+#                 index[1] += 1
+#                 index[0] = rows - 1
+#         if len(chunk[0]) < chunksz:
+#             break
+#         print('3 wait hijo r')
+#         barrier.wait()
+
+    
+# def rotate_g(chunk, chunksz):
+#     j = 1
+#     global index2
+#     global empty
+#     rows = len(empty)
+#     total = 0
+#     while True:
+#         barrier.wait()
+#         print('1 wait hijo g')
+#         print(total)
+#         print('aca')
+#         if total == (len(chunk)/3):
+#             print('2 wait hijo g')
+#             barrier.wait()
+#         for i in chunk[0]:
+#             empty[index2[0]][index2[1]][j] = i[j]
+#             total += 1
+#             index2[0] -= 1
+#             if index2[0] == -1 and index2[1] == rows+1:
+#                 empty[index2[0]][index2[1]][j] = i[j]
+#                 total += 1
+#             if index2[0] == -1:
+#                 index2[1] += 1
+#                 index2[0] = rows - 1
+#         if len(chunk[0]) < chunksz:
+#             break
+#         print('3 wait hijo g')
+#         barrier.wait()
+
+
+# def rotate_b(chunk, chunksz):
+#     j = 2
+#     global index3
+#     global empty
+#     rows = len(empty)
+#     total = 0
+#     while True:
+#         print('1 wait hijo b')
+#         barrier.wait()
+        
+#         if total == (len(chunk)/3):
+#             print('2 wait hijo b')
+#             barrier.wait()
+#         for i in chunk[0]:
+#             empty[index3[0]][index3[1]][j] = i[j]
+#             total += 1
+#             index3[0] -= 1
+#             if index3[0] == -1 and index3[1] == rows+1:
+#                 empty[index3[0]][index3[1]][j] = i[j]
+#                 total += 1
+
+#             if index3[0] == -1:
+#                 index3[1] += 1
+#                 index3[0] = rows - 1
+#         if len(chunk[0]) < chunksz:
+#             break
+#         print('3 wait hijo b')
+#         barrier.wait()
+        

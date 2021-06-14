@@ -39,7 +39,7 @@ def open_file(f):
         f_read = os.open(f, os.O_RDWR | os.O_CREAT)
     except FileNotFoundError:
         sys.stdout.write('ERROR. File "{}" does not exist.\n'.format(f))
-        exit(1)
+        exit()
     return f_read
 
 def header(f):
